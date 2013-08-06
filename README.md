@@ -18,8 +18,9 @@ Cities can read from a .csv file. This is specified by the `csv_name` variable, 
 Alternatively, cities can be specified directly as `City` objects. This is seen in the code around line 730. Provided are some sample cities in a 200 x 200 grid, as well as the Australian capitals (not hard to solve, just go round in a straight line). If I remember correctly, the provided cities.csv file contains the state capitals of the USA. With 48 cities this dataset is quite hard to solve and the algorithm struggles. 
 
 #### GUI
-The program has a GUI:  
-![Screenshot](https://raw.github.com/frigaardj/tsp-genetic-python/master/screenshot.png "App screenshot")
+The program has a GUI:
+
+![Screenshot](/screenshot.PNG "App screenshot")
 
 The 'map' will automatically rescale to encompass all of the cities.
 #### Breeding/crossover
