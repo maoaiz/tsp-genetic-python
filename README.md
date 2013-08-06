@@ -1,5 +1,5 @@
 ## tsp-genetic-python
-### An genetic algorithm to solve the Travelling Salesman Problem implemented in Python 3
+### A genetic algorithm to solve the Travelling Salesman Problem implemented in Python 3
 
 #### Usage
 Run with:
