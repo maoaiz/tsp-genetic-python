@@ -1,0 +1,8 @@
+Finished evolving 100 generations.
+Elapsed time was 4.3 seconds.
+ 
+Initial best distance: 4601.00
+Final best distance:   2541.00
+The best route went via:
+    C5,C26,C29,C3,C20,C10,C4,C13,C27,C24,C28,C12,C9,C6,C19,C15,C18,C17,C22,C14,C11,C25,C7,C23,C16,C8,C1,C21,C2
+---Ruta encontrada en 4.34524893761 seconds ---

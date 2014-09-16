@@ -18,8 +18,12 @@ import time
 import math
 import csv
 
-from tkinter import *
-from tkinter.ttk import *
+try:
+    from tkinter import *
+    from tkinter.ttk import *
+except Exception, e:
+    print "[ERROR]:", e
+    from Tkinter import *
 
 list_of_cities =[]
 
@@ -30,12 +34,12 @@ list_of_cities =[]
 #########################################
 
 # probability that an individual Route will mutate
-k_mut_prob = 0.4
+k_mut_prob = 0.2
 
 # Number of generations to run for
-k_n_generations = 200
+k_n_generations = 100
 # Population size of 1 generation (RoutePop)
-k_population_size = 200
+k_population_size = 100
 
 # Size of the tournament selection. 
 tournament_size = 7
@@ -63,7 +67,7 @@ class City(object):
     self.distance_to: dictionary of distances to other cities (keys are city names, values are floats)
 
     """
-    def __init__(self, name, x, y):
+    def __init__(self, name, x, y, distance_to={}):
         # Name and coordinates:
         self.name = name
         self.x = self.graph_x = x
@@ -71,7 +75,8 @@ class City(object):
         # Appends itself to the global list of cities:
         list_of_cities.append(self)
         # Creates a dictionary of the distances to all the other cities (has to use a value so uses itself - always 0)
-        self.distance_to = {self.name:0.0}
+        # self.distance_to = {self.name:0.0}
+        self.distance_to = distance_to
 
     def calculate_distances(self): 
         '''
@@ -84,12 +89,13 @@ class City(object):
         with city name keys and float values
         ''' 
         for city in list_of_cities:
-            tmp_dist = City.point_dist(self.x, self.y, city.x, city.y)
+            tmp_dist = self.point_dist(self.x, self.y, city.x, city.y)
             self.distance_to[city.name] = tmp_dist
+        # print "ready", self.distance_to
 
     # Calculates the distance between two cartesian points..
-    def point_dist(x1,y1,x2,y2):
-        return ((x1-x2)**2 + (y1-y2)**2)**(1/2)
+    def point_dist(self, x1,y1,x2,y2):
+        return ((x1-x2)**2 + (y1-y2)**2)**(0.5)
 
 
 # Route Class
@@ -130,7 +136,7 @@ class Route(object):
             # adds this length to its length attr.
             self.length += dist_to_next
 
-    def pr_cits_in_rt(self):
+    def pr_cits_in_rt(self, print_route=False):
         '''
         self --> None
 
@@ -140,7 +146,8 @@ class Route(object):
         for city in self.route:
             cities_str += city.name + ','
         cities_str = cities_str[:-1] # chops off last comma
-        print('    ' + cities_str)
+        if print_route:
+            print('    ' + cities_str)
 
     def pr_vrb_cits_in_rt(self):
         '''
@@ -165,12 +172,12 @@ class Route(object):
         '''
         for city in list_of_cities:
             # helper function defined up to
-            if Route.count_mult(self.route,lambda c: c.name == city.name) > 1:
+            if self.count_mult(self.route,lambda c: c.name == city.name) > 1:
                 return False
         return True
 
     # Returns the number of pred in sequence (duplicate checking.)
-    def count_mult(seq, pred):
+    def count_mult(self, seq, pred):
         return sum(1 for v in seq if pred(v))
 
 
@@ -289,7 +296,7 @@ class GA(object):
 
         return child_rt
 
-    def crossover(parent1, parent2):
+    def crossover(self, parent1, parent2):
         '''
         Route(), Route() --> Route()
 
@@ -355,7 +362,7 @@ class GA(object):
         child_rt.recalc_rt_len()
         return child_rt
 
-    def mutate(route_to_mut):
+    def mutate(self, route_to_mut):
         '''
         Route() --> Route()
 
@@ -410,7 +417,7 @@ class GA(object):
 
         return route_to_mut
 
-    def tournament_select(population):
+    def tournament_select(self, population):
         '''
         RoutePop() --> Route()
 
@@ -430,7 +437,7 @@ class GA(object):
         # returns the fittest:
         return tournament_pop.get_fittest()
 
-    def evolve_population(init_pop):
+    def evolve_population(self, init_pop):
         '''
         RoutePop() --> RoutePop()
 
@@ -451,11 +458,11 @@ class GA(object):
         # Goes through the new population and fills it with the child of two tournament winners from the previous populatio
         for x in range(elitismOffset,descendant_pop.size):
             # two parents:
-            tournament_parent1 = GA.tournament_select(init_pop)
-            tournament_parent2 = GA.tournament_select(init_pop)
+            tournament_parent1 = self.tournament_select(init_pop)
+            tournament_parent2 = self.tournament_select(init_pop)
 
             # A child:
-            tournament_child = GA.crossover(tournament_parent1, tournament_parent2)
+            tournament_child = self.crossover(tournament_parent1, tournament_parent2)
 
             # Fill the population up with children
             descendant_pop.rt_pop[x] = tournament_child
@@ -463,7 +470,7 @@ class GA(object):
         # Mutates all the routes (mutation with happen with a prob p = k_mut_prob)
         for route in descendant_pop.rt_pop:
             if random.random() < 0.3:
-                GA.mutate(route)
+                self.mutate(route)
 
         # Update the fittest route:
         descendant_pop.get_fittest()
@@ -479,7 +486,7 @@ class App(object):
     """
     Runs the application
     """
-    def __init__(self,n_generations,pop_size):
+    def __init__(self,n_generations,pop_size, graph=False):
         '''
         Initiates an App object to run for n_generations with a population of size pop_size
         '''
@@ -491,41 +498,44 @@ class App(object):
         self.pop_size = pop_size
 
         # Once all the cities are defined, calcualtes the distances for all of them.
-        for city in list_of_cities:
-            city.calculate_distances()
+        # for city in list_of_cities:
+        #     city.calculate_distances()
+        if graph:
+            self.set_city_gcoords()
+            
+            # Initiates a window object & sets its title
+            self.window = Tk()
+            self.window.wm_title("Generation 0")
 
-        self.set_city_gcoords()
-        
-        # Initiates a window object & sets its title
-        self.window = Tk()
-        self.window.wm_title("Generation 0")
+            # initiates two canvases, one for current and one for best
+            self.canvas_current = Canvas(self.window, height=300, width=300)
+            self.canvas_best = Canvas(self.window, height=300, width=300)
 
-        # initiates two canvases, one for current and one for best
-        self.canvas_current = Canvas(self.window, height=300, width=300)
-        self.canvas_best = Canvas(self.window, height=300, width=300)
+            # Initiates two labels
+            self.canvas_current_title = Label(self.window, text="Best route of current gen:")
+            self.canvas_best_title = Label(self.window, text="Overall best so far:")
 
-        # Initiates two labels
-        self.canvas_current_title = Label(self.window, text="Best route of current gen:")
-        self.canvas_best_title = Label(self.window, text="Overall best so far:")
+            # Initiates a status bar with a string
+            self.stat_tk_txt = StringVar()
+            self.status_label = Label(self.window, textvariable=self.stat_tk_txt, relief=SUNKEN, anchor=W)
 
-        # Initiates a status bar with a string
-        self.stat_tk_txt = StringVar()
-        self.status_label = Label(self.window, textvariable=self.stat_tk_txt, relief=SUNKEN, anchor=W)
+            # creates dots for the cities on both of the canvases
+            for city in list_of_cities:
+                self.canvas_current.create_oval(city.graph_x-2, city.graph_y-2, city.graph_x + 2, city.graph_y + 2, fill='blue')
+                self.canvas_best.create_oval(city.graph_x-2, city.graph_y-2, city.graph_x + 2, city.graph_y + 2, fill='blue')
 
-        # creates dots for the cities on both of the canvases
-        for city in list_of_cities:
-            self.canvas_current.create_oval(city.graph_x-2, city.graph_y-2, city.graph_x + 2, city.graph_y + 2, fill='blue')
-            self.canvas_best.create_oval(city.graph_x-2, city.graph_y-2, city.graph_x + 2, city.graph_y + 2, fill='blue')
+            # Packs all the widgets (physically creates them and places them in order)
+            self.canvas_current_title.pack()
+            self.canvas_current.pack()
+            self.canvas_best_title.pack()
+            self.canvas_best.pack()
+            self.status_label.pack(side=BOTTOM, fill=X)
 
-        # Packs all the widgets (physically creates them and places them in order)
-        self.canvas_current_title.pack()
-        self.canvas_current.pack()
-        self.canvas_best_title.pack()
-        self.canvas_best.pack()
-        self.status_label.pack(side=BOTTOM, fill=X)
-
-        # Runs the main window loop
-        self.window_loop()
+            # Runs the main window loop
+            self.window_loop()
+        else:
+            print "Calculating GA_loop"
+            self.GA_loop(n_generations,pop_size, graph=graph)
 
     def set_city_gcoords(self):
         '''
@@ -620,7 +630,7 @@ class App(object):
             for row in reader:
                 new_city = City(row[0],float(row[1]),float(row[2]))
 
-    def GA_loop(self,n_generations,pop_size):
+    def GA_loop(self,n_generations,pop_size, graph=False):
         '''
         Main logic loop for the GA. Creates and manages populations, running variables etc.
         '''
@@ -629,7 +639,9 @@ class App(object):
         start_time = time.time()
 
         # Creates the population:
+        print "Creates the population:"
         the_population = RoutePop(pop_size, True)
+        print "Finished Creates the population"
 
         # the_population.rt_pop[0].route = [1,8,38,31,44,18,7,28,6,37,19,27,17,43,30,36,46,33,20,47,21,32,39,48,5,42,24,10,45,35,4,26,2,29,34,41,16,22,3,23,14,25,13,11,12,15,40,9]
         # the_population.rt_pop[0].recalc_rt_len()
@@ -646,33 +658,35 @@ class App(object):
         # Creates a random route called best_route. It will store our overall best route.
         best_route = Route()
 
-        # Update the two canvases with the just-created routes:
-        self.update_canvas(self.canvas_current,the_population.fittest,'red')
-        self.update_canvas(self.canvas_best,best_route,'green')
+        if graph:
+            # Update the two canvases with the just-created routes:
+            self.update_canvas(self.canvas_current,the_population.fittest,'red')
+            self.update_canvas(self.canvas_best,best_route,'green')
 
 
         # Main process loop (for number of generations)
         for x in range(1,n_generations):
             # Updates the current canvas every n generations (to avoid it lagging out, increase n)
-            if x % 8 == 0:
+            if x % 8 == 0 and graph:
                 self.update_canvas(self.canvas_current,the_population.fittest,'red')
 
             # Evolves the population:
-            the_population = GA.evolve_population(the_population)
+            the_population = GA().evolve_population(the_population)
 
             # If we have found a new shorter route, save it to best_route
             if the_population.fittest.length < best_route.length:
                 # set the route (copy.deepcopy because the_population.fittest is persistent in this loop so will cause reference bugs)
                 best_route = copy.deepcopy(the_population.fittest)
-                # Update the second canvas because we have a new best route:
-                self.update_canvas(self.canvas_best,best_route,'green')
-                # update the status bar (bottom bar)
-                self.stat_tk_txt.set('Initial length {0:.2f} Best length = {1:.2f}'.format(initial_length,best_route.length))
-                self.status_label.pack()
-                self.status_label.update_idletasks()
+                if graph:
+                    # Update the second canvas because we have a new best route:
+                    self.update_canvas(self.canvas_best,best_route,'green')
+                    # update the status bar (bottom bar)
+                    self.stat_tk_txt.set('Initial length {0:.2f} Best length = {1:.2f}'.format(initial_length,best_route.length))
+                    self.status_label.pack()
+                    self.status_label.update_idletasks()
 
             # Prints info to the terminal:
-            App.clear_term()
+            self.clear_term()
             print('Generation {0} of {1}'.format(x,n_generations))
             print(' ')
             print('Overall fittest has length {0:.2f}'.format(best_route.length))
@@ -683,30 +697,30 @@ class App(object):
             print('And goes via:')
             the_population.fittest.pr_cits_in_rt()
             print(' ')
-            print('''The screen with the maps may become unresponsive if 
-the population size is too large. It will refresh at the end.''')
+            print('''The screen with the maps may become unresponsive if the population size is too large. It will refresh at the end.''')
 
-            # sets the window title to the latest Generation:
-            self.window.wm_title("Generation {0}".format(x))
+            if graph:
+                # sets the window title to the latest Generation:
+                self.window.wm_title("Generation {0}".format(x))
+        if graph:
+            # sets the window title to the last generation
+            self.window.wm_title("Generation {0}".format(n_generations))
 
-        # sets the window title to the last generation
-        self.window.wm_title("Generation {0}".format(n_generations))
-
-        # updates the best route canvas for the last time:
-        self.update_canvas(self.canvas_best,best_route,'green')
-        
+            # updates the best route canvas for the last time:
+            self.update_canvas(self.canvas_best,best_route,'green')
+            
         # takes the end time of the run:
         end_time = time.time()
 
         # Prints final output to terminal:
-        App.clear_term()
+        self.clear_term()
         print('Finished evolving {0} generations.'.format(n_generations))
         print("Elapsed time was {0:.1f} seconds.".format(end_time - start_time))
         print(' ')
         print('Initial best distance: {0:.2f}'.format(initial_length))
         print('Final best distance:   {0:.2f}'.format(best_route.length))
         print('The best route went via:')
-        best_route.pr_cits_in_rt()
+        best_route.pr_cits_in_rt(print_route=True)
 
     def window_loop(self):
         '''
@@ -718,7 +732,7 @@ the population size is too large. It will refresh at the end.''')
         self.window.mainloop()
 
     # Helper function for clearing terminal window
-    def clear_term():
+    def clear_term(self):
         os.system('cls' if os.name=='nt' else 'clear')
 
 ##############################
@@ -736,35 +750,77 @@ the population size is too large. It will refresh at the end.''')
 # sydney = City('sydney', 151.20, -33.87)
 
 ## Random cities
-i = City('i', 60, 200)
-j = City('j', 180, 190)
-k = City('k', 100, 180)
-l = City('l', 140, 180)
-m = City('m', 20, 160)
-n = City('n', 100, 160)
-o = City('o', 140, 140)
-p = City('p', 40, 120)
-q = City('q', 100, 120)
-r = City('r', 180, 100)
-s = City('s', 60, 80)
-t = City('t', 120, 80)
-u = City('u', 180, 60)
-v = City('v', 20, 40)
-w = City('w', 100, 40)
-x = City('x', 200, 40)
-a = City('a', 20, 20)
-b = City('b', 60, 20)
-c = City('c', 160, 20)
-d = City('d', 68, 130)
-e = City('e', 10, 10)
-f = City('f', 75, 180)
-g = City('g', 190, 190)
-h = City('h', 200, 10)
-# a1 = City('a1', 53, 99)
-
-for city in list_of_cities:
-    city.calculate_distances()
+# i = City('c1', 10, 2)
+# j = City('c2', 1, 22)
+# k = City('c3', 2, 13)
 
 
-######## create and run an application instance:
-app = App(n_generations=k_n_generations,pop_size=k_population_size)
+def specific_cities():
+    """function to calculate the route for files in data folder"""
+    try:
+        start_time = time.time()
+        # f = open("data/3x3.in", "r")
+        f = open("data/bays29.in", "r")
+        # f = open("data/d493.in", "r")
+        # f = open("data/pr2392.in", "r")
+        lines = int(f.readline())
+        for i, li in enumerate(f.readlines(), start=1):
+            os.system('cls' if os.name=='nt' else 'clear')
+            print "Leyendo '{}': {}/{} lineas".format(f.name, i, lines)
+            d = {}
+            for j, line in enumerate(map(float, li.split()), start=1):
+                d["C" + str(j)] = line
+            tmp = City("C" + str(i), 10, 10, d)
+            i += 1
+        print("--- %s seconds ---" % str(time.time() - start_time))
+        band = True
+    except Exception, e:
+        print e
+        band = False
+    if band:
+        print "Buscando la ruta mas corta para el viajero..."
+        try:
+            start_time = time.time()
+            app = App(n_generations=k_n_generations,pop_size=k_population_size)
+            print("---Ruta encontrada en %s seconds ---" % str(time.time() - start_time))
+        except Exception, e:
+            print "\n[ERROR]: %s\n" % e
+
+
+def random_cities():
+    i = City('i', 60, 200)
+    j = City('j', 180, 190)
+    k = City('k', 100, 180)
+    l = City('l', 140, 180)
+    m = City('m', 20, 160)
+    n = City('n', 100, 160)
+    o = City('o', 140, 140)
+    p = City('p', 40, 120)
+    q = City('q', 100, 120)
+    r = City('r', 180, 100)
+    s = City('s', 60, 80)
+    t = City('t', 120, 80)
+    u = City('u', 180, 60)
+    v = City('v', 20, 40)
+    w = City('w', 100, 40)
+    x = City('x', 200, 40)
+    a = City('a', 20, 20)
+    b = City('b', 60, 20)
+    c = City('c', 160, 20)
+    d = City('d', 68, 130)
+    e = City('e', 10, 10)
+    f = City('f', 75, 180)
+    g = City('g', 190, 190)
+    h = City('h', 200, 10)
+    # a1 = City('a1', 53, 99)
+
+    for city in list_of_cities:
+        city.calculate_distances()
+    ######## create and run an application instance:
+    app = App(n_generations=k_n_generations,pop_size=k_population_size, graph=True)
+
+if __name__ == '__main__':
+    """Select only one function: random or specific"""
+    specific_cities()
+    # random_cities()
+
