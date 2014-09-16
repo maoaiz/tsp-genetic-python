@@ -771,7 +771,6 @@ def specific_cities():
             for j, line in enumerate(map(float, li.split()), start=1):
                 d["C" + str(j)] = line
             tmp = City("C" + str(i), 10, 10, d)
-            i += 1
         print("--- %s seconds ---" % str(time.time() - start_time))
         band = True
     except Exception, e:
