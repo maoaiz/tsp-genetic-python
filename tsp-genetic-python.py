@@ -34,7 +34,7 @@ list_of_cities =[]
 #########################################
 
 # probability that an individual Route will mutate
-k_mut_prob = 0.2
+k_mut_prob = 0.4
 
 # Number of generations to run for
 k_n_generations = 100
@@ -67,7 +67,7 @@ class City(object):
     self.distance_to: dictionary of distances to other cities (keys are city names, values are floats)
 
     """
-    def __init__(self, name, x, y, distance_to={}):
+    def __init__(self, name, x, y, distance_to=None):
         # Name and coordinates:
         self.name = name
         self.x = self.graph_x = x
@@ -75,8 +75,9 @@ class City(object):
         # Appends itself to the global list of cities:
         list_of_cities.append(self)
         # Creates a dictionary of the distances to all the other cities (has to use a value so uses itself - always 0)
-        # self.distance_to = {self.name:0.0}
-        self.distance_to = distance_to
+        self.distance_to = {self.name:0.0}
+        if distance_to:
+            self.distance_to = distance_to
 
     def calculate_distances(self): 
         '''
@@ -91,7 +92,6 @@ class City(object):
         for city in list_of_cities:
             tmp_dist = self.point_dist(self.x, self.y, city.x, city.y)
             self.distance_to[city.name] = tmp_dist
-        # print "ready", self.distance_to
 
     # Calculates the distance between two cartesian points..
     def point_dist(self, x1,y1,x2,y2):
@@ -641,7 +641,7 @@ class App(object):
         # Creates the population:
         print "Creates the population:"
         the_population = RoutePop(pop_size, True)
-        print "Finished Creates the population"
+        print "Finished Creation of the population"
 
         # the_population.rt_pop[0].route = [1,8,38,31,44,18,7,28,6,37,19,27,17,43,30,36,46,33,20,47,21,32,39,48,5,42,24,10,45,35,4,26,2,29,34,41,16,22,3,23,14,25,13,11,12,15,40,9]
         # the_population.rt_pop[0].recalc_rt_len()
@@ -754,9 +754,44 @@ class App(object):
 # j = City('c2', 1, 22)
 # k = City('c3', 2, 13)
 
+def specific_cities2():
+    """function to calculate the route for files in data folder with coordinates"""
+    start_time = time.time()
+    f = open("data/pr2392-2.in", "r")
+    f.readline()
+    f.readline()
+    f.readline()
+    lines = int(f.readline().split()[2])
+    f.readline()
+    f.readline()
+    for i, li in enumerate(f.readlines(), start=1):
+        os.system('cls' if os.name=='nt' else 'clear')
+        print "Leyendo '{}': {}/{} lineas".format(f.name, i, lines)
+        c = li.split()
+        if not 'EOF' in c:
+            tmp = City("C" + str(c[0]), float(c[1]), float(c[2]))
+    print("---Time reading file and creating Cities: %s seconds ---\n" % str(time.time() - start_time))
+    
+    start_time = time.time()
+    print "Calculating distances..."
+    for city in list_of_cities:
+        city.calculate_distances()
+    print("---Time Calculating distances: %s seconds ---\n" % str(time.time() - start_time))
+    
+    print "Buscando la ruta mas corta para el viajero..."
+    try:
+        start_time = time.time()
+        app = App(n_generations=k_n_generations,pop_size=k_population_size)
+        print("---Ruta encontrada en %s seconds ---" % str(time.time() - start_time))
+    except Exception, e:
+        print "\n[ERROR]: %s\n" % e
+    # try:
+    # except Exception, e:
+    #     print "[Exception]", e
+
 
 def specific_cities():
-    """function to calculate the route for files in data folder"""
+    """function to calculate the route for files in data folder with distances"""
     try:
         start_time = time.time()
         # f = open("data/3x3.in", "r")
@@ -819,7 +854,8 @@ def random_cities():
     app = App(n_generations=k_n_generations,pop_size=k_population_size, graph=True)
 
 if __name__ == '__main__':
-    """Select only one function: random or specific"""
-    specific_cities()
+    """Select only one function: random, specific or specific2"""
+    specific_cities2()
+    # specific_cities()
     # random_cities()
 
